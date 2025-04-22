@@ -15,11 +15,11 @@ import (
 // сгенерированных чисел.
 func Generator(ctx context.Context, ch chan<- int64, fn func(int64)) {
 	// 1. Функция Generator
+	defer close(ch)
 	i := 0
 	for {
 		select {
 		case <-ctx.Done():
-			close(ch)
 			return
 		default:
 			i++
@@ -51,8 +51,8 @@ func main() {
 
 	// генерируем числа, считая параллельно их количество и сумму
 	go Generator(ctx, chIn, func(i int64) {
-		inputSum += i
-		inputCount++
+		atomic.AddInt64(&inputSum, i)
+		atomic.AddInt64(&inputCount, 1)
 	})
 
 	const NumOut = 5 // количество обрабатывающих горутин и каналов
@@ -95,8 +95,8 @@ func main() {
 
 	// 5. Читаем числа из результирующего канала
 	for v := range chOut {
-		atomic.AddInt64(&sum, v)
-		atomic.AddInt64(&count, 1)
+		sum += v
+		count++
 	}
 
 	fmt.Println("Количество чисел", inputCount, count)
